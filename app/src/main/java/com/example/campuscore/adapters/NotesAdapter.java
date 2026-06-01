@@ -1,6 +1,7 @@
 package com.example.campuscore.adapters;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -20,10 +21,16 @@ import java.util.Locale;
 public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHolder> {
     private final List<NotesModel> items;
     private final OnNoteActionListener listener;
+    private final boolean showDeleteAction;
 
     public NotesAdapter(List<NotesModel> items, OnNoteActionListener listener) {
+        this(items, listener, false);
+    }
+
+    public NotesAdapter(List<NotesModel> items, OnNoteActionListener listener, boolean showDeleteAction) {
         this.items = items;
         this.listener = listener;
+        this.showDeleteAction = showDeleteAction;
         setHasStableIds(true);
     }
 
@@ -31,7 +38,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
     @Override
     public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemNoteBinding binding = ItemNoteBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-        return new NoteViewHolder(binding, listener);
+        return new NoteViewHolder(binding, listener, showDeleteAction);
     }
 
     @Override
@@ -59,11 +66,13 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
     static class NoteViewHolder extends RecyclerView.ViewHolder {
         private final ItemNoteBinding binding;
         private final OnNoteActionListener listener;
+        private final boolean showDeleteAction;
 
-        NoteViewHolder(ItemNoteBinding binding, OnNoteActionListener listener) {
+        NoteViewHolder(ItemNoteBinding binding, OnNoteActionListener listener, boolean showDeleteAction) {
             super(binding.getRoot());
             this.binding = binding;
             this.listener = listener;
+            this.showDeleteAction = showDeleteAction;
         }
 
         void bind(NotesModel note) {
@@ -78,6 +87,8 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
                     formatTimestamp(note.getTimestamp())
             ));
             binding.openButton.setOnClickListener(v -> listener.onOpenNote(note));
+            binding.deleteButton.setVisibility(showDeleteAction ? View.VISIBLE : View.GONE);
+            binding.deleteButton.setOnClickListener(v -> listener.onDeleteNote(note));
         }
 
         private String formatTimestamp(Timestamp timestamp) {
@@ -91,6 +102,9 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
 
     public interface OnNoteActionListener {
         void onOpenNote(NotesModel note);
+
+        default void onDeleteNote(NotesModel note) {
+        }
     }
 
     private static final class DiffCallback extends DiffUtil.Callback {

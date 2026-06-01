@@ -10,17 +10,41 @@
             android:icon="@android:drawable/ic_menu_today"
             android:title="@string/attendance" />
         <item
+            android:id="@+id/nav_manage_students"
+            android:icon="@android:drawable/ic_menu_manage"
+            android:title="@string/manage_students" />
+        <item
+            android:id="@+id/nav_manage_departments"
+            android:icon="@android:drawable/ic_menu_manage"
+            android:title="@string/manage_departments" />
+        <item
+            android:id="@+id/nav_manage_subjects"
+            android:icon="@android:drawable/ic_menu_edit"
+            android:title="@string/manage_subjects" />
+        <item
+            android:id="@+id/nav_manage_pending_teachers"
+            android:icon="@android:drawable/ic_menu_myplaces"
+            android:title="@string/manage_pending_teachers" />
+        <item
+            android:id="@+id/nav_manage_teaching_assignments"
+            android:icon="@android:drawable/ic_menu_agenda"
+            android:title="@string/manage_teaching_assignments" />
+        <item
             android:id="@+id/nav_notes"
             android:icon="@android:drawable/ic_menu_edit"
             android:title="@string/notes" />
         <item
-            android:id="@+id/nav_quiz"
-            android:icon="@android:drawable/ic_menu_help"
-            android:title="@string/quiz" />
+            android:id="@+id/nav_updates"
+            android:icon="@android:drawable/ic_menu_info_details"
+            android:title="@string/updates" />
         <item
             android:id="@+id/nav_profile"
             android:icon="@android:drawable/ic_menu_myplaces"
             android:title="@string/profile" />
+        <item
+            android:id="@+id/nav_about"
+            android:icon="@android:drawable/ic_menu_info_details"
+            android:title="@string/about_campuscore" />
     </group>
     <item
         android:id="@+id/nav_logout"

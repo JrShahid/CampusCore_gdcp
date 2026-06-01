@@ -1,8 +1,7 @@
 package com.example.campuscore.fragments.notes;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,8 +20,8 @@ import com.example.campuscore.firebase.FirestoreCallback;
 import com.example.campuscore.models.NotesModel;
 import com.example.campuscore.models.UserModel;
 import com.example.campuscore.repositories.NotesRepository;
-import com.example.campuscore.utils.CloudinaryConstants;
 import com.example.campuscore.utils.NetworkUtils;
+import com.example.campuscore.utils.PdfOpenUtils;
 import com.example.campuscore.utils.SnackbarUtils;
 import com.example.campuscore.utils.ValidationUtils;
 
@@ -74,7 +73,7 @@ public class StudentNotesFragment extends Fragment {
         userRepository.fetchCurrentUser(new FirestoreCallback<UserModel>() {
             @Override
             public void onSuccess(UserModel user) {
-                notesRepository.fetchStudentNotes(user.getDepartment(), user.getSemester(), new FirestoreCallback<List<NotesModel>>() {
+                notesRepository.fetchStudentNotes(user, new FirestoreCallback<List<NotesModel>>() {
                     @Override
                     public void onSuccess(List<NotesModel> data) {
                         binding.progressBar.setVisibility(View.GONE);
@@ -138,16 +137,33 @@ public class StudentNotesFragment extends Fragment {
 
     private void openPdf(NotesModel note) {
         if (ValidationUtils.isBlank(note.getPdfUrl())) {
+            Log.e(PdfOpenUtils.TAG, "Student note click stopped: empty pdfUrl noteId=" + note.getNoteId());
             SnackbarUtils.show(binding.rootLayout, getString(R.string.notes_open_error));
             return;
         }
         try {
-            SnackbarUtils.show(binding.rootLayout, getString(R.string.download_ready));
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.parse(note.getPdfUrl()), CloudinaryConstants.MIME_TYPE_PDF);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+            Log.d(PdfOpenUtils.TAG, "Student note click noteId=" + note.getNoteId() + " pdfUrl=" + note.getPdfUrl());
+            PdfOpenUtils.openRemotePdf(requireContext(), note.getNoteId(), note.getPdfUrl(), new PdfOpenUtils.OpenPdfCallback() {
+                @Override
+                public void onDownloadStart() {
+                    binding.progressBar.setVisibility(View.VISIBLE);
+                    SnackbarUtils.show(binding.rootLayout, getString(R.string.download_ready));
+                }
+
+                @Override
+                public void onViewerLaunch() {
+                    binding.progressBar.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onError() {
+                    binding.progressBar.setVisibility(View.GONE);
+                    SnackbarUtils.show(binding.rootLayout, getString(R.string.notes_open_error));
+                }
+            });
         } catch (Exception error) {
+            Log.e(PdfOpenUtils.TAG, "Student note click exception noteId=" + note.getNoteId(), error);
+            binding.progressBar.setVisibility(View.GONE);
             SnackbarUtils.show(binding.rootLayout, getString(R.string.notes_open_error));
         }
     }

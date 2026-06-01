@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <ImageView
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:layout_gravity="center_horizontal"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/ic_campuscore_logo" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="@string/about_campuscore"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_card"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                style="@style/AboutCampusCoreLabel"
+                android:text="@string/about_app_name_label" />
+
+            <TextView
+                style="@style/AboutCampusCoreValue"
+                android:text="@string/app_name" />
+
+            <TextView
+                style="@style/AboutCampusCoreLabel"
+                android:layout_marginTop="16dp"
+                android:text="@string/about_institution_label" />
+
+            <TextView
+                style="@style/AboutCampusCoreValue"
+                android:text="@string/college_name" />
+
+            <TextView
+                style="@style/AboutCampusCoreLabel"
+                android:layout_marginTop="16dp"
+                android:text="@string/about_version_label" />
+
+            <TextView
+                style="@style/AboutCampusCoreValue"
+                android:text="@string/about_version_value" />
+
+            <TextView
+                style="@style/AboutCampusCoreLabel"
+                android:layout_marginTop="16dp"
+                android:text="@string/about_purpose_label" />
+
+            <TextView
+                style="@style/AboutCampusCoreValue"
+                android:text="@string/about_purpose_value" />
+
+            <TextView
+                style="@style/AboutCampusCoreLabel"
+                android:layout_marginTop="16dp"
+                android:text="@string/about_technologies_label" />
+
+            <TextView
+                style="@style/AboutCampusCoreValue"
+                android:text="@string/about_technologies_value" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

@@ -15,6 +15,7 @@ import java.util.List;
 
 public class StudentAttendanceAdapter extends RecyclerView.Adapter<StudentAttendanceAdapter.StudentAttendanceViewHolder> {
     private final List<StudentAttendanceItem> items;
+    private boolean editable = true;
 
     public StudentAttendanceAdapter(List<StudentAttendanceItem> items) {
         this.items = items;
@@ -34,7 +35,7 @@ public class StudentAttendanceAdapter extends RecyclerView.Adapter<StudentAttend
 
     @Override
     public void onBindViewHolder(@NonNull StudentAttendanceViewHolder holder, int position) {
-        holder.bind(items.get(position));
+        holder.bind(items.get(position), editable);
     }
 
     @Override
@@ -54,6 +55,11 @@ public class StudentAttendanceAdapter extends RecyclerView.Adapter<StudentAttend
         diffResult.dispatchUpdatesTo(this);
     }
 
+    public void setEditable(boolean editable) {
+        this.editable = editable;
+        notifyDataSetChanged();
+    }
+
     static class StudentAttendanceViewHolder extends RecyclerView.ViewHolder {
         private final ItemStudentAttendanceBinding binding;
 
@@ -62,7 +68,7 @@ public class StudentAttendanceAdapter extends RecyclerView.Adapter<StudentAttend
             this.binding = binding;
         }
 
-        void bind(StudentAttendanceItem item) {
+        void bind(StudentAttendanceItem item, boolean editable) {
             binding.nameText.setText(item.getUser().getName());
             String rollNumber = item.getUser().getRollNumber().isEmpty()
                     ? binding.getRoot().getContext().getString(R.string.roll_number_missing)
@@ -70,6 +76,7 @@ public class StudentAttendanceAdapter extends RecyclerView.Adapter<StudentAttend
             binding.rollText.setText(binding.getRoot().getContext().getString(R.string.roll_number) + ": " + rollNumber);
             binding.presentSwitch.setOnCheckedChangeListener(null);
             binding.presentSwitch.setChecked(item.isPresent());
+            binding.presentSwitch.setEnabled(editable);
             binding.presentSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> item.setPresent(isChecked));
         }
     }

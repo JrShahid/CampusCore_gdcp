@@ -11,28 +11,151 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn() && currentUser().role == "admin";
+      return signedIn() && currentUser().role in ["admin", "Admin", "ADMIN"];
     }
 
     function isTeacher() {
-      return signedIn() && currentUser().role == "teacher";
+      return signedIn() && currentUser().role in ["teacher", "Teacher", "TEACHER"];
     }
 
     function isStudent() {
-      return signedIn() && currentUser().role == "student";
+      return signedIn() && currentUser().role in ["student", "Student", "STUDENT"];
+    }
+
+    function authEmail() {
+      return request.auth.token.email;
+    }
+
+    function sameInstitutionalFields() {
+      return request.resource.data.department == resource.data.department
+        && request.resource.data.departmentId == resource.data.departmentId
+        && request.resource.data.semester == resource.data.semester
+        && request.resource.data.section == resource.data.section
+        && request.resource.data.batch == resource.data.batch
+        && request.resource.data.rollNumber == resource.data.rollNumber
+        && request.resource.data.registrationNumber == resource.data.registrationNumber
+        && request.resource.data.role == resource.data.role;
+    }
+
+    function userDepartment() {
+      return "departmentId" in currentUser().keys() ? currentUser().departmentId : currentUser().department;
+    }
+
+    function pendingStudentId(data) {
+      return data.rollNumber + "_" + data.registrationNumber;
+    }
+
+    function pendingStudentPath(data) {
+      return /databases/$(database)/documents/pendingStudents/$(pendingStudentId(data));
+    }
+
+    function matchingPendingStudent(data) {
+      return exists(pendingStudentPath(data))
+        && data.uid == request.auth.uid
+        && get(pendingStudentPath(data)).data.rollNumber == data.rollNumber
+        && get(pendingStudentPath(data)).data.registrationNumber == data.registrationNumber
+        && get(pendingStudentPath(data)).data.departmentId == data.departmentId
+        && get(pendingStudentPath(data)).data.semester == data.semester
+        && get(pendingStudentPath(data)).data.section == data.section
+        && get(pendingStudentPath(data)).data.batch == data.batch
+        && get(pendingStudentPath(data)).data.role == data.role;
+    }
+
+    function pendingTeacherPath(data) {
+      return /databases/$(database)/documents/pendingTeachers/$(data.employeeId);
+    }
+
+    function pendingTeacherEmployeePath(employeeId) {
+      return /databases/$(database)/documents/pendingTeachers/$(employeeId);
+    }
+
+    function matchingPendingTeacher(data) {
+      return exists(pendingTeacherPath(data))
+        && data.uid == request.auth.uid
+        && get(pendingTeacherPath(data)).data.employeeId == data.employeeId
+        && get(pendingTeacherPath(data)).data.name == data.name
+        && get(pendingTeacherPath(data)).data.designation == data.designation
+        && get(pendingTeacherPath(data)).data.primaryDepartmentId == data.primaryDepartmentId
+        && data.departmentId == data.primaryDepartmentId
+        && get(pendingTeacherPath(data)).data.isActive == true;
+    }
+
+    function sameDepartment(first, second) {
+      return first == second
+        || (first == "CS" && second == "Computer Science")
+        || (first == "Computer Science" && second == "CS")
+        || (first == "IT" && second == "Information Technology")
+        || (first == "Information Technology" && second == "IT")
+        || (first == "ECE" && second == "Electronics")
+        || (first == "Electronics" && second == "ECE")
+        || (first == "ME" && second == "Mechanical")
+        || (first == "Mechanical" && second == "ME")
+        || (first == "CE" && second == "Civil")
+        || (first == "Civil" && second == "CE");
     }
 
     function validAttendanceWrite(attendanceId) {
       return request.resource.data.attendanceId == attendanceId
+        && request.resource.data.sessionId is string
         && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.assignmentId is string
         && request.resource.data.studentUid is string
         && request.resource.data.studentName is string
         && request.resource.data.rollNumber is string
+        && request.resource.data.registrationNumber is string
         && request.resource.data.subject is string
         && request.resource.data.semester is string
         && request.resource.data.department is string
         && request.resource.data.date is string
         && request.resource.data.status in ["Present", "Absent"];
+    }
+
+    function validAttendanceSessionWrite(sessionId) {
+      return request.resource.data.sessionId == sessionId
+        && request.resource.data.assignmentId is string
+        && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.teacherName is string
+        && request.resource.data.employeeId is string
+        && request.resource.data.subjectCode is string
+        && request.resource.data.subjectName is string
+        && request.resource.data.departmentId is string
+        && request.resource.data.semester is string
+        && request.resource.data.section is string
+        && request.resource.data.date is string
+        && request.resource.data.totalStudents is int
+        && request.resource.data.presentCount is int
+        && request.resource.data.absentCount is int
+        && request.resource.data.isLocked == true
+        && request.resource.data.editableUntil is timestamp;
+    }
+
+    function teacherCanWriteAttendanceSession() {
+      return exists(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId))
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.teacherUid == request.auth.uid
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.subjectCode == request.resource.data.subjectCode
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.departmentId == request.resource.data.departmentId
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.semester == request.resource.data.semester
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.section == request.resource.data.section
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.isActive == true;
+    }
+
+    function sessionAllowsAttendanceRecord() {
+      return getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.teacherUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.assignmentId == request.resource.data.assignmentId
+        && getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.subjectCode == request.resource.data.subject
+        && getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.departmentId == request.resource.data.department
+        && getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.semester == request.resource.data.semester
+        && getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.date == request.resource.data.date
+        && request.time < getAfter(/databases/$(database)/documents/attendanceSessions/$(request.resource.data.sessionId)).data.editableUntil;
+    }
+
+    function teacherCanWriteAttendance() {
+      return exists(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId))
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.teacherUid == request.auth.uid
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.subjectCode == request.resource.data.subject
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.departmentId == request.resource.data.department
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.semester == request.resource.data.semester
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.isActive == true;
     }
 
     function validNoteWrite(noteId) {
@@ -41,6 +164,7 @@ service cloud.firestore {
         && request.resource.data.title is string
         && request.resource.data.subjectCode is string
         && request.resource.data.subjectName is string
+        && request.resource.data.assignmentId is string
         && request.resource.data.department is string
         && request.resource.data.semester is string
         && request.resource.data.uploadedByName is string
@@ -49,50 +173,243 @@ service cloud.firestore {
         && request.resource.data.fileName is string;
     }
 
+    function teacherCanWriteNote() {
+      return exists(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId))
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.teacherUid == request.auth.uid
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.subjectCode == request.resource.data.subjectCode
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.departmentId == request.resource.data.department
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.semester == request.resource.data.semester
+        && get(/databases/$(database)/documents/teachingAssignments/$(request.resource.data.assignmentId)).data.isActive == true;
+    }
+
+    function validDepartmentWrite(departmentId) {
+      return request.resource.data.departmentId == departmentId
+        && request.resource.data.departmentName is string
+        && request.resource.data.isActive is bool;
+    }
+
+    function validSubjectWrite(subjectCode) {
+      return request.resource.data.subjectCode == subjectCode
+        && request.resource.data.subjectName is string
+        && request.resource.data.departmentId is string
+        && request.resource.data.semester is string
+        && request.resource.data.isActive is bool;
+    }
+
+    function validTeachingAssignmentWrite(assignmentId) {
+      return request.resource.data.assignmentId == assignmentId
+        && request.resource.data.teacherUid is string
+        && request.resource.data.employeeId is string
+        && request.resource.data.teacherName is string
+        && request.resource.data.subjectCode is string
+        && request.resource.data.subjectName is string
+        && request.resource.data.departmentId is string
+        && request.resource.data.departmentLabel is string
+        && request.resource.data.semester is string
+        && request.resource.data.section is string
+        && request.resource.data.isActive is bool;
+    }
+
+    function validTeacherAssignmentClaim(assignmentId) {
+      return signedIn()
+        && validTeachingAssignmentWrite(assignmentId)
+        && (!("teacherUid" in resource.data.keys()) || resource.data.teacherUid == "" || resource.data.teacherUid == request.auth.uid)
+        && request.resource.data.teacherUid == request.auth.uid
+        && (request.resource.data.employeeId == resource.data.employeeId
+          || (!("employeeId" in resource.data.keys()) || resource.data.employeeId == ""))
+        && request.resource.data.assignmentId == resource.data.assignmentId
+        && request.resource.data.subjectCode == resource.data.subjectCode
+        && request.resource.data.subjectName == resource.data.subjectName
+        && request.resource.data.departmentId == resource.data.departmentId
+        && (!("departmentLabel" in resource.data.keys())
+          || request.resource.data.departmentLabel == resource.data.departmentLabel)
+        && request.resource.data.semester == resource.data.semester
+        && request.resource.data.section == resource.data.section
+        && request.resource.data.isActive == resource.data.isActive
+        && exists(pendingTeacherEmployeePath(request.resource.data.employeeId))
+        && getAfter(pendingTeacherEmployeePath(request.resource.data.employeeId)).data.uid == request.auth.uid
+        && getAfter(pendingTeacherEmployeePath(request.resource.data.employeeId)).data.isActive == true;
+    }
+
+    function canReadAssignmentForOnboarding() {
+      return signedIn()
+        && resource.data.employeeId is string
+        && (!("teacherUid" in resource.data.keys()) || resource.data.teacherUid == "")
+        && exists(pendingTeacherEmployeePath(resource.data.employeeId))
+        && get(pendingTeacherEmployeePath(resource.data.employeeId)).data.isActive == true
+        && (!("uid" in get(pendingTeacherEmployeePath(resource.data.employeeId)).data.keys())
+          || get(pendingTeacherEmployeePath(resource.data.employeeId)).data.uid == "");
+    }
+
+    function validPendingTeacherWrite(teacherId) {
+      return request.resource.data.employeeId == teacherId
+        && request.resource.data.name is string
+        && request.resource.data.primaryDepartmentId is string
+        && request.resource.data.designation is string
+        && request.resource.data.isActive is bool;
+    }
+
     match /users/{userId} {
-      allow create: if signedIn() && request.auth.uid == userId
-        && request.resource.data.role == "student";
+      allow create: if isAdmin()
+        || (signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.email == authEmail()
+          && ((request.resource.data.role == "student" && matchingPendingStudent(request.resource.data))
+            || (request.resource.data.role == "teacher" && matchingPendingTeacher(request.resource.data))));
       allow read: if (signedIn() && request.auth.uid == userId)
         || isAdmin()
-        || (isTeacher() && resource.data.role == "student");
+        || (isTeacher() && resource.data.role == "student" && resource.data.departmentId == userDepartment())
+        || (signedIn()
+          && resource.data.role == "student"
+          && resource.data.email == authEmail());
       allow update: if isAdmin()
         || (signedIn()
           && request.auth.uid == userId
-          && request.resource.data.role == resource.data.role);
-      allow delete: if isAdmin();
+          && sameInstitutionalFields());
+      allow delete: if isAdmin()
+        || (signedIn()
+          && resource.data.role == "student"
+          && resource.data.email == authEmail());
     }
 
     match /attendanceRecords/{attendanceId} {
       allow create: if isTeacher()
-        && validAttendanceWrite(attendanceId);
+        && validAttendanceWrite(attendanceId)
+        && teacherCanWriteAttendance()
+        && sessionAllowsAttendanceRecord();
       allow update: if isTeacher()
         && resource.data.teacherUid == request.auth.uid
         && request.resource.data.studentUid == resource.data.studentUid
-        && validAttendanceWrite(attendanceId);
+        && validAttendanceWrite(attendanceId)
+        && teacherCanWriteAttendance()
+        && sessionAllowsAttendanceRecord();
       allow read: if isAdmin()
         || (isTeacher() && resource.data.teacherUid == request.auth.uid)
         || (isStudent() && resource.data.studentUid == request.auth.uid);
     }
 
+    match /attendanceSessions/{sessionId} {
+      allow create: if isTeacher()
+        && validAttendanceSessionWrite(sessionId)
+        && teacherCanWriteAttendanceSession()
+        && request.resource.data.editableUntil > request.time;
+      allow update: if isTeacher()
+        && resource.data.teacherUid == request.auth.uid
+        && request.time < resource.data.editableUntil
+        && validAttendanceSessionWrite(sessionId)
+        && request.resource.data.assignmentId == resource.data.assignmentId
+        && request.resource.data.teacherUid == resource.data.teacherUid
+        && request.resource.data.subjectCode == resource.data.subjectCode
+        && request.resource.data.departmentId == resource.data.departmentId
+        && request.resource.data.semester == resource.data.semester
+        && request.resource.data.section == resource.data.section
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.editableUntil == resource.data.editableUntil
+        && teacherCanWriteAttendanceSession();
+      allow get: if isAdmin()
+        || isTeacher()
+        || isStudent();
+      allow list: if isAdmin()
+        || (isTeacher() && resource.data.teacherUid == request.auth.uid)
+        || isStudent();
+    }
+
     match /notes/{noteId} {
       allow create: if isTeacher()
-        && validNoteWrite(noteId);
+        && validNoteWrite(noteId)
+        && teacherCanWriteNote();
       allow read: if isAdmin()
         || (isTeacher() && resource.data.uploadedByUid == request.auth.uid)
         || (isStudent()
-          && resource.data.department == currentUser().department
+          && sameDepartment(resource.data.department, userDepartment())
           && resource.data.semester == currentUser().semester);
       allow update: if isTeacher()
         && resource.data.uploadedByUid == request.auth.uid
         && request.resource.data.uploadedByUid == resource.data.uploadedByUid
-        && validNoteWrite(noteId);
+        && validNoteWrite(noteId)
+        && teacherCanWriteNote();
       allow delete: if isTeacher()
         && resource.data.uploadedByUid == request.auth.uid;
     }
 
-    match /academic/{document=**} {
+    match /departments/{departmentId} {
       allow read: if signedIn();
-      allow write: if isTeacher() || isAdmin();
+      allow create, update: if isAdmin()
+        && validDepartmentWrite(departmentId);
+      allow delete: if isAdmin();
+    }
+
+    match /subjects/{subjectCode} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && validSubjectWrite(subjectCode);
+      allow delete: if isAdmin();
+    }
+
+    match /pendingTeachers/{employeeId} {
+      allow read: if isAdmin()
+        || (signedIn()
+          && (!("uid" in resource.data.keys()) || resource.data.uid == "")
+          && resource.data.employeeId is string);
+      allow create: if isAdmin()
+        && validPendingTeacherWrite(employeeId);
+      allow update: if (isAdmin()
+          && validPendingTeacherWrite(employeeId))
+        || (signedIn()
+          && (!("uid" in resource.data.keys()) || resource.data.uid == "")
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email == authEmail()
+          && request.resource.data.employeeId == resource.data.employeeId
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.primaryDepartmentId == resource.data.primaryDepartmentId
+          && request.resource.data.designation == resource.data.designation
+          && request.resource.data.isActive == resource.data.isActive);
+      allow delete: if isAdmin();
+    }
+
+    match /teachingAssignments/{assignmentId} {
+      allow read: if isAdmin()
+        || (isTeacher() && resource.data.teacherUid == request.auth.uid)
+        || canReadAssignmentForOnboarding();
+      allow create: if isAdmin()
+        && validTeachingAssignmentWrite(assignmentId);
+      allow update: if (isAdmin()
+          && validTeachingAssignmentWrite(assignmentId))
+        || validTeacherAssignmentClaim(assignmentId);
+      allow delete: if isAdmin();
+    }
+
+    match /pendingStudents/{pendingStudentId} {
+      allow read: if isAdmin()
+        || (isTeacher() && resource.data.departmentId == userDepartment())
+        || (signedIn()
+          && (!("uid" in resource.data.keys()) || resource.data.uid == "")
+          && resource.data.rollNumber is string
+          && resource.data.registrationNumber is string);
+      allow create: if isAdmin()
+        || (isTeacher()
+          && request.resource.data.departmentId == userDepartment()
+          && request.resource.data.rollNumber is string
+          && request.resource.data.registrationNumber is string
+          && request.resource.data.semester is string
+          && request.resource.data.section is string);
+      allow update: if isAdmin()
+        || (isTeacher()
+          && request.resource.data.departmentId == userDepartment()
+          && request.resource.data.rollNumber is string
+          && request.resource.data.registrationNumber is string
+          && request.resource.data.semester is string
+          && request.resource.data.section is string)
+        || (signedIn()
+          && (!("uid" in resource.data.keys()) || resource.data.uid == "")
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email == authEmail()
+          && request.resource.data.departmentId == resource.data.departmentId
+          && request.resource.data.semester == resource.data.semester
+          && request.resource.data.section == resource.data.section
+          && request.resource.data.rollNumber == resource.data.rollNumber
+          && request.resource.data.registrationNumber == resource.data.registrationNumber);
+      allow delete: if isAdmin();
     }
 
     match /{document=**} {

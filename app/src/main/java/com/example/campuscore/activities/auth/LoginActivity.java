@@ -46,6 +46,10 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onSuccess(UserModel data) {
                 setLoading(false);
+                if (!repository.isEmailVerified()) {
+                    NavigationUtils.openVerifyEmailAndClear(LoginActivity.this);
+                    return;
+                }
                 NavigationUtils.openDashboard(LoginActivity.this, data);
             }
 

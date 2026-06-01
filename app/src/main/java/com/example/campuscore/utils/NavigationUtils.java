@@ -6,6 +6,7 @@ import android.content.Intent;
 
 import com.example.campuscore.activities.admin.AdminDashboardActivity;
 import com.example.campuscore.activities.auth.LoginActivity;
+import com.example.campuscore.activities.auth.VerifyEmailActivity;
 import com.example.campuscore.activities.student.StudentDashboardActivity;
 import com.example.campuscore.activities.teacher.TeacherDashboardActivity;
 import com.example.campuscore.firebase.FirebaseUserRepository;
@@ -34,6 +35,12 @@ public class NavigationUtils {
 
     public static void openLoginAndClear(Context context) {
         Intent intent = new Intent(context, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        context.startActivity(intent);
+    }
+
+    public static void openVerifyEmailAndClear(Context context) {
+        Intent intent = new Intent(context, VerifyEmailActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         context.startActivity(intent);
     }

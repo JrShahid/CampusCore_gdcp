@@ -15,6 +15,10 @@ public final class AcademicDataProvider {
         return new ArrayList<>(departmentCodeMap().keySet());
     }
 
+    public static Map<String, String> defaultDepartmentCodeMap() {
+        return new LinkedHashMap<>(departmentCodeMap());
+    }
+
     public static List<String> semesterLabels() {
         List<String> semesters = new ArrayList<>();
         for (int i = 1; i <= 8; i++) {
@@ -31,7 +35,20 @@ public final class AcademicDataProvider {
         return semesters;
     }
 
+    public static List<String> sectionValues() {
+        List<String> sections = new ArrayList<>();
+        sections.add("A");
+        sections.add("B");
+        sections.add("C");
+        sections.add("D");
+        return sections;
+    }
+
     public static List<SubjectItem> subjectsForDepartment(String departmentName) {
+        return subjectsForDepartmentAndSemester(departmentName, "");
+    }
+
+    public static List<SubjectItem> subjectsForDepartmentAndSemester(String departmentName, String semester) {
         Map<String, List<SubjectItem>> subjectMap = subjectMap();
         if (subjectMap.containsKey(departmentName)) {
             return new ArrayList<>(subjectMap.get(departmentName));
@@ -42,6 +59,30 @@ public final class AcademicDataProvider {
     public static String departmentCode(String departmentName) {
         Map<String, String> codes = departmentCodeMap();
         return codes.containsKey(departmentName) ? codes.get(departmentName) : "GEN";
+    }
+
+    public static String departmentNameForCode(String departmentCode) {
+        if (departmentCode == null || departmentCode.trim().isEmpty()) {
+            return DEFAULT_DEPARTMENT;
+        }
+        for (Map.Entry<String, String> entry : departmentCodeMap().entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(departmentCode.trim())) {
+                return entry.getKey();
+            }
+        }
+        return DEFAULT_DEPARTMENT;
+    }
+
+    public static boolean isDepartmentCode(String department) {
+        if (department == null) {
+            return false;
+        }
+        for (String code : departmentCodeMap().values()) {
+            if (code.equalsIgnoreCase(department.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static String semesterValue(String semesterLabel) {

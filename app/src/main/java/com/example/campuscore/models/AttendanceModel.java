@@ -4,9 +4,12 @@ import com.google.firebase.Timestamp;
 
 public class AttendanceModel {
     private String attendanceId;
+    private String sessionId;
+    private String assignmentId;
     private String studentUid;
     private String studentName;
     private String rollNumber;
+    private String registrationNumber;
     private String teacherUid;
     private String subject;
     private String semester;
@@ -42,6 +45,22 @@ public class AttendanceModel {
         this.attendanceId = attendanceId;
     }
 
+    public String getSessionId() {
+        return sessionId == null ? "" : sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public String getAssignmentId() {
+        return assignmentId == null ? "" : assignmentId;
+    }
+
+    public void setAssignmentId(String assignmentId) {
+        this.assignmentId = assignmentId;
+    }
+
     public String getStudentUid() {
         return studentUid == null ? "" : studentUid;
     }
@@ -64,6 +83,14 @@ public class AttendanceModel {
 
     public void setRollNumber(String rollNumber) {
         this.rollNumber = rollNumber;
+    }
+
+    public String getRegistrationNumber() {
+        return registrationNumber == null ? "" : registrationNumber;
+    }
+
+    public void setRegistrationNumber(String registrationNumber) {
+        this.registrationNumber = registrationNumber;
     }
 
     public String getTeacherUid() {

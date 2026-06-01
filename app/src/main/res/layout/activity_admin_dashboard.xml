@@ -33,5 +33,6 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@color/white"
+        app:headerLayout="@layout/drawer_header_campuscore"
         app:menu="@menu/admin_drawer_menu" />
 </androidx.drawerlayout.widget.DrawerLayout>

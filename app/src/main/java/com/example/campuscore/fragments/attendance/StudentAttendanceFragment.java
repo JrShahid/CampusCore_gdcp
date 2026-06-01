@@ -66,6 +66,8 @@ public class StudentAttendanceFragment extends Fragment {
         binding.subjectSummaryRecyclerView.setAdapter(summaryAdapter);
 
         binding.subjectFilterSpinner.setOnItemClickListener((parent, view1, position, id) -> applyFilters());
+        binding.downloadAttendanceButton.setOnClickListener(v ->
+                SnackbarUtils.show(binding.rootLayout, getString(R.string.available_soon)));
         loadAttendance();
     }
 

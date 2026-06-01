@@ -17,7 +17,7 @@
             android:layout_height="48dp"
             android:layout_gravity="center"
             android:contentDescription="@string/app_name"
-            android:src="@drawable/ic_campus" />
+            android:src="@drawable/ic_campuscore_logo" />
     </FrameLayout>
 
     <TextView
@@ -36,6 +36,15 @@
         android:text="@string/tagline"
         android:textColor="@color/secondary_cyan_soft"
         android:textSize="16sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="@string/college_name"
+        android:textColor="@color/white"
+        android:textSize="14sp" />
 
     <ProgressBar
         android:id="@+id/progressBar"

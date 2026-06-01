@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.drawerlayout)
     implementation(libs.swiperefreshlayout)
     implementation(libs.okhttp)
+    implementation(libs.glide)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

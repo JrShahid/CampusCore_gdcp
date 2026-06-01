@@ -14,9 +14,11 @@ import java.util.List;
 
 public class FeatureCardAdapter extends RecyclerView.Adapter<FeatureCardAdapter.FeatureViewHolder> {
     private final List<FeatureCard> items;
+    private final OnFeatureClickListener listener;
 
-    public FeatureCardAdapter(List<FeatureCard> items) {
+    public FeatureCardAdapter(List<FeatureCard> items, OnFeatureClickListener listener) {
         this.items = items;
+        this.listener = listener;
     }
 
     @NonNull
@@ -32,12 +34,16 @@ public class FeatureCardAdapter extends RecyclerView.Adapter<FeatureCardAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull FeatureViewHolder holder, int position) {
-        holder.bind(items.get(position));
+        holder.bind(items.get(position), listener);
     }
 
     @Override
     public int getItemCount() {
         return items.size();
+    }
+
+    public interface OnFeatureClickListener {
+        void onFeatureClick(FeatureCard item);
     }
 
     static class FeatureViewHolder extends RecyclerView.ViewHolder {
@@ -48,12 +54,18 @@ public class FeatureCardAdapter extends RecyclerView.Adapter<FeatureCardAdapter.
             this.binding = binding;
         }
 
-        void bind(FeatureCard item) {
+        void bind(FeatureCard item, OnFeatureClickListener listener) {
             binding.iconImage.setImageResource(item.getIconResId());
             binding.titleText.setText(item.getTitle());
             binding.descriptionText.setText(item.getDescription());
             binding.statusText.setVisibility(item.isAvailableSoon() ? View.VISIBLE : View.GONE);
             binding.getRoot().setAlpha(item.isAvailableSoon() ? 0.78f : 1f);
+            boolean navigable = !item.isAvailableSoon() && item.getNavigationItemId() != 0;
+            binding.getRoot().setClickable(navigable);
+            binding.getRoot().setFocusable(navigable);
+            binding.getRoot().setOnClickListener(navigable && listener != null
+                    ? view -> listener.onFeatureClick(item)
+                    : null);
         }
     }
 }

@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,13 +23,16 @@ import com.example.campuscore.adapters.NotesAdapter;
 import com.example.campuscore.databinding.FragmentUploadNotesBinding;
 import com.example.campuscore.firebase.FirestoreCallback;
 import com.example.campuscore.models.NotesModel;
+import com.example.campuscore.models.TeachingAssignmentModel;
 import com.example.campuscore.repositories.NotesRepository;
-import com.example.campuscore.utils.AcademicDataProvider;
+import com.example.campuscore.repositories.TeachingAssignmentsRepository;
 import com.example.campuscore.utils.CloudinaryConstants;
 import com.example.campuscore.utils.IntentConstants;
 import com.example.campuscore.utils.NetworkUtils;
+import com.example.campuscore.utils.PdfOpenUtils;
 import com.example.campuscore.utils.SnackbarUtils;
 import com.example.campuscore.utils.ValidationUtils;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,12 +43,13 @@ import java.util.List;
 public class UploadNotesFragment extends Fragment {
     private FragmentUploadNotesBinding binding;
     private NotesRepository repository;
+    private TeachingAssignmentsRepository assignmentsRepository;
     private final List<NotesModel> uploadedNotes = new ArrayList<>();
     private NotesAdapter notesAdapter;
     private Uri selectedPdfUri;
     private String selectedFileName = "";
     private byte[] selectedPdfBytes;
-    private final List<AcademicDataProvider.SubjectItem> currentSubjects = new ArrayList<>();
+    private final List<TeachingAssignmentModel> currentAssignments = new ArrayList<>();
 
     private final ActivityResultLauncher<String[]> filePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
@@ -70,7 +75,18 @@ public class UploadNotesFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         repository = new NotesRepository();
-        notesAdapter = new NotesAdapter(uploadedNotes, this::openPdf);
+        assignmentsRepository = new TeachingAssignmentsRepository();
+        notesAdapter = new NotesAdapter(uploadedNotes, new NotesAdapter.OnNoteActionListener() {
+            @Override
+            public void onOpenNote(NotesModel note) {
+                openPdf(note);
+            }
+
+            @Override
+            public void onDeleteNote(NotesModel note) {
+                confirmDeleteNote(note);
+            }
+        }, true);
         binding.notesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.notesRecyclerView.setAdapter(notesAdapter);
 
@@ -82,46 +98,42 @@ public class UploadNotesFragment extends Fragment {
     }
 
     private void setupAcademicSelectors() {
-        ArrayAdapter<String> departmentAdapter = new ArrayAdapter<>(
-                requireContext(),
-                android.R.layout.simple_list_item_1,
-                AcademicDataProvider.departmentNames()
-        );
-        ArrayAdapter<String> semesterAdapter = new ArrayAdapter<>(
-                requireContext(),
-                android.R.layout.simple_list_item_1,
-                AcademicDataProvider.semesterLabels()
-        );
-        binding.departmentSpinner.setAdapter(departmentAdapter);
-        binding.semesterSpinner.setAdapter(semesterAdapter);
+        binding.departmentSpinner.setVisibility(View.GONE);
+        binding.semesterSpinner.setVisibility(View.GONE);
+        assignmentsRepository.fetchTeacherAssignments(new FirestoreCallback<List<TeachingAssignmentModel>>() {
+            @Override
+            public void onSuccess(List<TeachingAssignmentModel> data) {
+                bindAssignmentDropdown(data);
+            }
 
-        if (departmentAdapter.getCount() > 0) {
-            binding.departmentSpinner.setText(departmentAdapter.getItem(0), false);
-        }
-        if (semesterAdapter.getCount() > 0) {
-            binding.semesterSpinner.setText(semesterAdapter.getItem(0), false);
-        }
-
-        binding.departmentSpinner.setOnItemClickListener((parent, view, position, id) -> updateSubjects());
-        updateSubjects();
+            @Override
+            public void onError(String message) {
+                SnackbarUtils.show(binding.rootLayout, message);
+            }
+        });
     }
 
-    private void updateSubjects() {
-        currentSubjects.clear();
-        currentSubjects.addAll(AcademicDataProvider.subjectsForDepartment(selectedDepartment()));
-        List<String> subjectLabels = new ArrayList<>();
-        for (AcademicDataProvider.SubjectItem item : currentSubjects) {
-            subjectLabels.add(item.toString());
+    private void bindAssignmentDropdown(List<TeachingAssignmentModel> data) {
+        currentAssignments.clear();
+        currentAssignments.addAll(data);
+        List<String> labels = new ArrayList<>();
+        for (TeachingAssignmentModel item : currentAssignments) {
+            labels.add(assignmentsRepository.buildAssignmentLabel(item));
         }
         ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_list_item_1,
-                subjectLabels
+                labels
         );
         binding.subjectSpinner.setAdapter(subjectAdapter);
         if (subjectAdapter.getCount() > 0) {
             binding.subjectSpinner.setText(subjectAdapter.getItem(0), false);
         }
+        binding.uploadButton.setEnabled(!currentAssignments.isEmpty());
+        binding.emptyText.setText(currentAssignments.isEmpty()
+                ? getString(R.string.no_teaching_assignments_help)
+                : getString(R.string.teacher_notes_empty));
+        binding.emptyText.setVisibility(currentAssignments.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void openFilePicker() {
@@ -193,15 +205,12 @@ public class UploadNotesFragment extends Fragment {
             return;
         }
 
-        AcademicDataProvider.SubjectItem subjectItem = selectedSubjectItem();
+        TeachingAssignmentModel assignment = selectedAssignment();
         setUploadingState(true, 0);
         repository.uploadNote(
                 selectedPdfBytes,
                 title,
-                selectedDepartment(),
-                AcademicDataProvider.semesterValue(selectedSemesterLabel()),
-                subjectItem.getCode(),
-                subjectItem.getName(),
+                assignment,
                 teacherName(),
                 selectedFileName,
                 new NotesRepository.UploadNotesCallback() {
@@ -256,18 +265,62 @@ public class UploadNotesFragment extends Fragment {
 
     private void openPdf(NotesModel note) {
         if (ValidationUtils.isBlank(note.getPdfUrl())) {
+            Log.e(PdfOpenUtils.TAG, "Teacher note click stopped: empty pdfUrl noteId=" + note.getNoteId());
             SnackbarUtils.show(binding.rootLayout, getString(R.string.notes_open_error));
             return;
         }
         try {
-            SnackbarUtils.show(binding.rootLayout, getString(R.string.download_ready));
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(note.getPdfUrl()));
-            intent.setDataAndType(Uri.parse(note.getPdfUrl()), CloudinaryConstants.MIME_TYPE_PDF);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+            Log.d(PdfOpenUtils.TAG, "Teacher note click noteId=" + note.getNoteId() + " pdfUrl=" + note.getPdfUrl());
+            PdfOpenUtils.openRemotePdf(requireContext(), note.getNoteId(), note.getPdfUrl(), new PdfOpenUtils.OpenPdfCallback() {
+                @Override
+                public void onDownloadStart() {
+                    binding.listProgressBar.setVisibility(View.VISIBLE);
+                    SnackbarUtils.show(binding.rootLayout, getString(R.string.download_ready));
+                }
+
+                @Override
+                public void onViewerLaunch() {
+                    binding.listProgressBar.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onError() {
+                    binding.listProgressBar.setVisibility(View.GONE);
+                    SnackbarUtils.show(binding.rootLayout, getString(R.string.notes_open_error));
+                }
+            });
         } catch (Exception error) {
+            Log.e(PdfOpenUtils.TAG, "Teacher note click exception noteId=" + note.getNoteId(), error);
+            binding.listProgressBar.setVisibility(View.GONE);
             SnackbarUtils.show(binding.rootLayout, getString(R.string.notes_open_error));
         }
+    }
+
+    private void confirmDeleteNote(NotesModel note) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.confirm_delete_note_title)
+                .setMessage(R.string.confirm_delete_note_message)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.delete, (dialog, which) -> deleteNote(note))
+                .show();
+    }
+
+    private void deleteNote(NotesModel note) {
+        binding.listProgressBar.setVisibility(View.VISIBLE);
+        repository.deleteNote(note, new FirestoreCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+                binding.listProgressBar.setVisibility(View.GONE);
+                SnackbarUtils.show(binding.rootLayout, getString(R.string.note_deleted));
+                loadUploadedNotes();
+            }
+
+            @Override
+            public void onError(String message) {
+                binding.listProgressBar.setVisibility(View.GONE);
+                SnackbarUtils.show(binding.rootLayout, message);
+            }
+        });
     }
 
     private void setUploadingState(boolean loading, int progress) {
@@ -291,24 +344,14 @@ public class UploadNotesFragment extends Fragment {
         binding.fileNameText.setText(R.string.no_file_selected);
     }
 
-    private String selectedDepartment() {
-        return binding.departmentSpinner.getText().toString().trim();
-    }
-
-    private String selectedSemesterLabel() {
-        return binding.semesterSpinner.getText().toString().trim();
-    }
-
-    private AcademicDataProvider.SubjectItem selectedSubjectItem() {
+    private TeachingAssignmentModel selectedAssignment() {
         String selected = binding.subjectSpinner.getText().toString().trim();
-        for (AcademicDataProvider.SubjectItem item : currentSubjects) {
-            if (item.toString().equals(selected)) {
+        for (TeachingAssignmentModel item : currentAssignments) {
+            if (assignmentsRepository.buildAssignmentLabel(item).equals(selected)) {
                 return item;
             }
         }
-        return currentSubjects.isEmpty()
-                ? new AcademicDataProvider.SubjectItem("GEN", "General")
-                : currentSubjects.get(0);
+        return currentAssignments.isEmpty() ? new TeachingAssignmentModel() : currentAssignments.get(0);
     }
 
     private String teacherName() {

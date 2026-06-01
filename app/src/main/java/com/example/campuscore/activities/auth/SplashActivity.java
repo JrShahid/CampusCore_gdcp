@@ -45,6 +45,11 @@ public class SplashActivity extends AppCompatActivity {
             return;
         }
 
+        if (!repository.isEmailVerified()) {
+            NavigationUtils.openVerifyEmailAndClear(this);
+            return;
+        }
+
         repository.fetchCurrentUser(new FirestoreCallback<UserModel>() {
             @Override
             public void onSuccess(UserModel data) {

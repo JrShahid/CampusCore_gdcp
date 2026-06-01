@@ -20,8 +20,8 @@
             android:layout_marginTop="32dp"
             android:background="@drawable/bg_primary_circle"
             android:contentDescription="@string/app_name"
-            android:padding="18dp"
-            android:src="@drawable/ic_campus" />
+            android:padding="12dp"
+            android:src="@drawable/ic_campuscore_logo" />
 
         <TextView
             android:layout_width="match_parent"
@@ -39,6 +39,15 @@
             android:text="@string/login_subtitle"
             android:textColor="@color/text_secondary"
             android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/college_short_name"
+            android:textColor="@color/primary_indigo"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <LinearLayout
             android:layout_width="match_parent"

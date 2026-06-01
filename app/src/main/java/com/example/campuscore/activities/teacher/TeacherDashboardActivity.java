@@ -12,11 +12,11 @@ import com.example.campuscore.fragments.attendance.MarkAttendanceFragment;
 import com.example.campuscore.fragments.HomeFragment;
 import com.example.campuscore.fragments.notes.UploadNotesFragment;
 import com.example.campuscore.fragments.ProfileFragment;
-import com.example.campuscore.fragments.QuizFragment;
+import com.example.campuscore.fragments.updates.CampusCoreUpdatesFragment;
 import com.example.campuscore.utils.IntentConstants;
 import com.example.campuscore.utils.NavigationUtils;
 
-public class TeacherDashboardActivity extends AppCompatActivity {
+public class TeacherDashboardActivity extends AppCompatActivity implements HomeFragment.DashboardNavigator {
     private ActivityDashboardBottomBinding binding;
     private FirebaseUserRepository repository;
 
@@ -27,7 +27,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         repository = new FirebaseUserRepository();
 
-        binding.toolbar.setTitle(R.string.teacher_dashboard);
+        binding.toolbar.setTitle(R.string.toolbar_brand_compact);
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.nav_logout) {
                 repository.logout();
@@ -44,8 +44,8 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 fragment = MarkAttendanceFragment.newInstance();
             } else if (id == R.id.nav_notes) {
                 fragment = UploadNotesFragment.newInstance();
-            } else if (id == R.id.nav_quiz) {
-                fragment = QuizFragment.create();
+            } else if (id == R.id.nav_updates) {
+                fragment = CampusCoreUpdatesFragment.newInstance();
             } else if (id == R.id.nav_profile) {
                 fragment = ProfileFragment.create(userName(), userEmail(), FirebaseUserRepository.ROLE_TEACHER);
             } else {
@@ -65,6 +65,11 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .commit();
+    }
+
+    @Override
+    public void navigateTo(int navigationItemId) {
+        binding.bottomNavigation.setSelectedItemId(navigationItemId);
     }
 
     private String userName() {

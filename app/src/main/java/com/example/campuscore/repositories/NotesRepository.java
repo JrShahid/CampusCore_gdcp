@@ -7,6 +7,10 @@ import androidx.annotation.NonNull;
 
 import com.example.campuscore.firebase.FirestoreCallback;
 import com.example.campuscore.models.NotesModel;
+import com.example.campuscore.models.SubjectModel;
+import com.example.campuscore.models.TeachingAssignmentModel;
+import com.example.campuscore.models.UserModel;
+import com.example.campuscore.utils.AcademicDataProvider;
 import com.example.campuscore.utils.CloudinaryConstants;
 import com.example.campuscore.utils.FirestoreCollections;
 import com.example.campuscore.utils.FirestoreFields;
@@ -17,13 +21,13 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
-import com.google.firebase.firestore.Query;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +57,12 @@ public class NotesRepository {
     public void uploadNote(byte[] pdfBytes, String title, String departmentName, String semesterValue,
                            String subjectCode, String subjectName, String teacherName, String fileName,
                            UploadNotesCallback callback) {
+        uploadNote(pdfBytes, title, departmentName, semesterValue, subjectCode, subjectName, "", teacherName, fileName, callback);
+    }
+
+    private void uploadNote(byte[] pdfBytes, String title, String departmentName, String semesterValue,
+                            String subjectCode, String subjectName, String assignmentId, String teacherName,
+                            String fileName, UploadNotesCallback callback) {
         FirebaseUser currentUser = auth.getCurrentUser();
         if (currentUser == null) {
             callback.onError("Session expired. Please login again.");
@@ -125,6 +135,7 @@ public class NotesRepository {
                 noteMap.put(FirestoreFields.TITLE, title);
                 noteMap.put(FirestoreFields.SUBJECT_CODE, subjectCode);
                 noteMap.put(FirestoreFields.SUBJECT_NAME, subjectName);
+                noteMap.put(FirestoreFields.ASSIGNMENT_ID, assignmentId);
                 noteMap.put(FirestoreFields.DEPARTMENT, departmentName);
                 noteMap.put(FirestoreFields.SEMESTER, semesterValue);
                 noteMap.put(FirestoreFields.UPLOADED_BY_UID, currentUser.getUid());
@@ -142,6 +153,18 @@ public class NotesRepository {
         });
     }
 
+    public void uploadNote(byte[] pdfBytes, String title, SubjectModel subject, String teacherName, String fileName,
+                           UploadNotesCallback callback) {
+        uploadNote(pdfBytes, title, subject.getDepartmentId(), subject.getSemester(), subject.getSubjectCode(),
+                subject.getSubjectName(), teacherName, fileName, callback);
+    }
+
+    public void uploadNote(byte[] pdfBytes, String title, TeachingAssignmentModel assignment, String teacherName,
+                           String fileName, UploadNotesCallback callback) {
+        uploadNote(pdfBytes, title, assignment.getDepartmentId(), assignment.getSemester(), assignment.getSubjectCode(),
+                assignment.getSubjectName(), assignment.getAssignmentId(), teacherName, fileName, callback);
+    }
+
     public void fetchTeacherNotes(FirestoreCallback<List<NotesModel>> callback) {
         FirebaseUser currentUser = auth.getCurrentUser();
         if (currentUser == null) {
@@ -151,9 +174,12 @@ public class NotesRepository {
 
         firestore.collection(FirestoreCollections.NOTES)
                 .whereEqualTo(FirestoreFields.UPLOADED_BY_UID, currentUser.getUid())
-                .orderBy(FirestoreFields.TIMESTAMP, Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> callback.onSuccess(parseNotes(queryDocumentSnapshots.getDocuments())))
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<NotesModel> notes = parseNotes(queryDocumentSnapshots.getDocuments());
+                    sortNotes(notes);
+                    callback.onSuccess(notes);
+                })
                 .addOnFailureListener(error -> callback.onError(readableError(error)));
     }
 
@@ -167,9 +193,52 @@ public class NotesRepository {
         firestore.collection(FirestoreCollections.NOTES)
                 .whereEqualTo(FirestoreFields.DEPARTMENT, department)
                 .whereEqualTo(FirestoreFields.SEMESTER, semester)
-                .orderBy(FirestoreFields.TIMESTAMP, Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> callback.onSuccess(parseNotes(queryDocumentSnapshots.getDocuments())))
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<NotesModel> notes = parseNotes(queryDocumentSnapshots.getDocuments());
+                    sortNotes(notes);
+                    String departmentCode = AcademicDataProvider.departmentCode(department);
+                    String legacyDepartment = AcademicDataProvider.departmentNameForCode(department);
+                    String alternateDepartment = AcademicDataProvider.isDepartmentCode(department)
+                            ? legacyDepartment
+                            : departmentCode;
+                    if (alternateDepartment.equals(department)) {
+                        callback.onSuccess(notes);
+                        return;
+                    }
+                    firestore.collection(FirestoreCollections.NOTES)
+                            .whereEqualTo(FirestoreFields.DEPARTMENT, alternateDepartment)
+                            .whereEqualTo(FirestoreFields.SEMESTER, semester)
+                            .get()
+                            .addOnSuccessListener(alternateSnapshots -> {
+                                notes.addAll(parseNotes(alternateSnapshots.getDocuments()));
+                                sortNotes(notes);
+                                callback.onSuccess(notes);
+                            })
+                            .addOnFailureListener(error -> callback.onSuccess(notes));
+                })
+                .addOnFailureListener(error -> callback.onError(readableError(error)));
+    }
+
+    public void fetchStudentNotes(UserModel student, FirestoreCallback<List<NotesModel>> callback) {
+        fetchStudentNotes(student.getDepartmentId(), student.getSemester(), callback);
+    }
+
+    public void deleteNote(NotesModel note, FirestoreCallback<Void> callback) {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser == null) {
+            callback.onError("Session expired. Please login again.");
+            return;
+        }
+        if (note == null || note.getNoteId().trim().isEmpty()) {
+            callback.onError("Unable to delete this note.");
+            return;
+        }
+
+        firestore.collection(FirestoreCollections.NOTES)
+                .document(note.getNoteId())
+                .delete()
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
                 .addOnFailureListener(error -> callback.onError(readableError(error)));
     }
 
@@ -182,6 +251,15 @@ public class NotesRepository {
             }
         }
         return notes;
+    }
+
+    private void sortNotes(List<NotesModel> notes) {
+        Collections.sort(notes, (first, second) -> {
+            if (first.getTimestamp() == null || second.getTimestamp() == null) {
+                return 0;
+            }
+            return second.getTimestamp().compareTo(first.getTimestamp());
+        });
     }
 
     private String readableError(@NonNull Exception error) {
