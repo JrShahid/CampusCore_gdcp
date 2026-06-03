@@ -93,9 +93,9 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
                 binding.activeSwitch.setText(isChecked ? R.string.active : R.string.inactive));
         binding.saveButton.setOnClickListener(v -> saveAssignment());
         binding.cancelButton.setOnClickListener(v -> requireActivity().getSupportFragmentManager().popBackStack());
+        bindExisting();
         loadTeachers();
         loadDepartments();
-        bindExisting();
     }
 
     private void loadTeachers() {
@@ -109,7 +109,7 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
                     labels.add(teacherLabel(teacher));
                 }
                 bindDropdown(binding.teacherInput, labels);
-                bindExisting();
+                bindExistingTeacherLabelIfUnchanged();
             }
 
             @Override
@@ -125,7 +125,6 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
             public void onSuccess(List<DepartmentModel> data) {
                 bindDropdown(binding.departmentInput, academicRepository.departmentIds(data));
                 loadSubjects();
-                bindExisting();
             }
 
             @Override
@@ -136,10 +135,16 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
     }
 
     private void loadSubjects() {
-        academicRepository.fetchActiveSubjectsStrict(binding.departmentInput.getText().toString().trim(),
-                binding.semesterInput.getText().toString().trim(), new FirestoreCallback<List<SubjectModel>>() {
+        String requestedDepartment = binding.departmentInput.getText().toString().trim();
+        String requestedSemester = binding.semesterInput.getText().toString().trim();
+        academicRepository.fetchActiveSubjectsStrict(requestedDepartment,
+                requestedSemester, new FirestoreCallback<List<SubjectModel>>() {
                     @Override
                     public void onSuccess(List<SubjectModel> data) {
+                        if (!requestedDepartment.equals(binding.departmentInput.getText().toString().trim())
+                                || !requestedSemester.equals(binding.semesterInput.getText().toString().trim())) {
+                            return;
+                        }
                         subjects.clear();
                         subjects.addAll(data);
                         List<String> labels = new ArrayList<>();
@@ -147,7 +152,6 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
                             labels.add(subject.toString());
                         }
                         bindDropdown(binding.subjectInput, labels);
-                        bindExisting();
                     }
 
                     @Override
@@ -170,6 +174,18 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
         binding.subjectInput.setText(args.getString(ARG_SUBJECT_CODE, "") + " - " + args.getString(ARG_SUBJECT_NAME, ""), false);
         binding.sectionInput.setText(args.getString(ARG_SECTION, ""), false);
         binding.activeSwitch.setChecked(args.getBoolean(ARG_ACTIVE, true));
+    }
+
+    private void bindExistingTeacherLabelIfUnchanged() {
+        Bundle args = getArguments();
+        if (args == null || !args.containsKey(ARG_ID)) {
+            return;
+        }
+        String current = binding.teacherInput.getText().toString().trim();
+        String fallback = existingTeacherFallback(args);
+        if (current.equals(fallback)) {
+            binding.teacherInput.setText(existingTeacherLabel(args), false);
+        }
     }
 
     private void saveAssignment() {
@@ -278,6 +294,11 @@ public class AddEditTeachingAssignmentFragment extends Fragment {
                 return teacherLabel(teacher);
             }
         }
+        return existingTeacherFallback(args);
+    }
+
+    private String existingTeacherFallback(Bundle args) {
+        String employeeId = args.getString(ARG_EMPLOYEE_ID, "");
         String teacherName = args.getString(ARG_TEACHER_NAME, "");
         return employeeId.isEmpty() ? teacherName : teacherName + " - " + employeeId;
     }
