@@ -2,6 +2,7 @@ package com.example.campuscore.activities.student;
 
 import android.os.Bundle;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
@@ -58,6 +59,18 @@ public class StudentDashboardActivity extends AppCompatActivity implements HomeF
         if (savedInstanceState == null) {
             show(HomeFragment.newInstance(FirebaseUserRepository.ROLE_STUDENT));
         }
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (binding.bottomNavigation.getSelectedItemId() != R.id.nav_home) {
+                    binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 
     private void show(Fragment fragment) {

@@ -203,6 +203,7 @@ public class CampusCoreUpdatesRepository {
         return fallback;
     }
 
+
     private List<FeedItemModel> uniqueLatestFirst(List<FeedItemModel> items) {
         Set<String> seen = new HashSet<>();
         List<FeedItemModel> uniqueItems = new ArrayList<>();
@@ -263,6 +264,7 @@ public class CampusCoreUpdatesRepository {
         }
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(millis));
     }
+
 
     @NonNull
     private Long parseDateMillis(String value) {

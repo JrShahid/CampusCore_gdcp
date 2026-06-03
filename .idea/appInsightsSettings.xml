@@ -6,14 +6,6 @@
         <entry key="Firebase Crashlytics">
           <value>
             <InsightsFilterSettings>
-              <option name="connection">
-                <ConnectionSetting>
-                  <option name="appId" value="com.example.campuscore" />
-                  <option name="mobileSdkAppId" value="1:977027344113:android:e123a508a5477e6e94ab50" />
-                  <option name="projectId" value="campuscore-gdc" />
-                  <option name="projectNumber" value="977027344113" />
-                </ConnectionSetting>
-              </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
               <option name="timeIntervalDays" value="THIRTY_DAYS" />
               <option name="visibilityType" value="ALL" />

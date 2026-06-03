@@ -76,6 +76,13 @@ public class MarkAttendanceFragment extends Fragment {
     }
 
     private void setupDropdowns() {
+        binding.subjectSpinner.setThreshold(0);
+        binding.subjectSpinner.setOnClickListener(v -> binding.subjectSpinner.showDropDown());
+        binding.subjectSpinner.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && !currentAssignments.isEmpty()) {
+                binding.subjectSpinner.showDropDown();
+            }
+        });
         binding.subjectSpinner.setOnItemClickListener((parent, view, position, id) -> {
             currentSession = null;
             attendanceEditable = true;

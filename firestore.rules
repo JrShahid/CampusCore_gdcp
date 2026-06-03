@@ -41,6 +41,50 @@ service cloud.firestore {
       return "departmentId" in currentUser().keys() ? currentUser().departmentId : currentUser().department;
     }
 
+    function studentDepartment(data) {
+      return "departmentId" in data.keys() ? data.departmentId : data.department;
+    }
+
+    function hasTeacherAssignmentDoc(owner, subjectCode, data) {
+      return exists(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section))
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.teacherUid == request.auth.uid
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.subjectCode == subjectCode
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.departmentId == studentDepartment(data)
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.semester == data.semester
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.section == data.section
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.isActive == true;
+    }
+
+    function teacherHasAssignmentSubjectAt(data, index) {
+      return "assignedSubjects" in currentUser().keys()
+        && currentUser().assignedSubjects is list
+        && currentUser().assignedSubjects.size() > index
+        && currentUser().assignedSubjects[index] is string
+        && (hasTeacherAssignmentDoc(request.auth.uid, currentUser().assignedSubjects[index], data)
+          || ("employeeId" in currentUser().keys()
+            && currentUser().employeeId is string
+            && hasTeacherAssignmentDoc(currentUser().employeeId, currentUser().assignedSubjects[index], data)));
+    }
+
+    function teacherHasAssignmentForStudent(data) {
+      return isTeacher()
+        && data.semester is string
+        && data.section is string
+        && studentDepartment(data) is string
+        && (teacherHasAssignmentSubjectAt(data, 0)
+          || teacherHasAssignmentSubjectAt(data, 1)
+          || teacherHasAssignmentSubjectAt(data, 2)
+          || teacherHasAssignmentSubjectAt(data, 3)
+          || teacherHasAssignmentSubjectAt(data, 4)
+          || teacherHasAssignmentSubjectAt(data, 5)
+          || teacherHasAssignmentSubjectAt(data, 6)
+          || teacherHasAssignmentSubjectAt(data, 7)
+          || teacherHasAssignmentSubjectAt(data, 8)
+          || teacherHasAssignmentSubjectAt(data, 9)
+          || teacherHasAssignmentSubjectAt(data, 10)
+          || teacherHasAssignmentSubjectAt(data, 11));
+    }
+
     function pendingStudentId(data) {
       return data.rollNumber + "_" + data.registrationNumber;
     }
@@ -259,6 +303,7 @@ service cloud.firestore {
       allow read: if (signedIn() && request.auth.uid == userId)
         || isAdmin()
         || (isTeacher() && resource.data.role == "student" && resource.data.departmentId == userDepartment())
+        || (resource.data.role == "student" && teacherHasAssignmentForStudent(resource.data))
         || (signedIn()
           && resource.data.role == "student"
           && resource.data.email == authEmail());
@@ -382,6 +427,7 @@ service cloud.firestore {
     match /pendingStudents/{pendingStudentId} {
       allow read: if isAdmin()
         || (isTeacher() && resource.data.departmentId == userDepartment())
+        || teacherHasAssignmentForStudent(resource.data)
         || (signedIn()
           && (!("uid" in resource.data.keys()) || resource.data.uid == "")
           && resource.data.rollNumber is string

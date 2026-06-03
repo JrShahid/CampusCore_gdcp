@@ -74,6 +74,7 @@ public class CampusCoreUpdatesFragment extends Fragment {
         userRepository = new FirebaseUserRepository();
         updatesAdapter = new CampusCoreUpdatesAdapter(visibleUpdates, this::openArticle);
 
+
         binding.updatesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.updatesRecyclerView.setAdapter(updatesAdapter);
         binding.swipeRefreshLayout.setOnRefreshListener(() -> loadUpdates(true));
@@ -179,6 +180,26 @@ public class CampusCoreUpdatesFragment extends Fragment {
         binding.subjectFilterSpinner.setAdapter(adapter);
         binding.subjectFilterSpinner.setText(getString(R.string.all_subjects), false);
     }
+
+//    private List<String> fallbackSubjectOptions(String departmentId) {
+//        List<String> subjects = new ArrayList<>();
+//        subjects.add(getString(R.string.all_subjects));
+//        for (AcademicDataProvider.SubjectItem item : AcademicDataProvider.subjectsForDepartment(
+//                AcademicDataProvider.departmentNameForCode(departmentId))) {
+//            subjects.add(item.toString());
+//        }
+//        return subjects;
+//    }
+
+//    private void bindSubjectFilter(List<String> subjects) {
+//        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+//                requireContext(),
+//                android.R.layout.simple_list_item_1,
+//                subjects
+//        );
+//        binding.subjectFilterSpinner.setAdapter(adapter);
+//        binding.subjectFilterSpinner.setText(getString(R.string.all_subjects), false);
+//    }
 
     private void loadUpdates(boolean showLoading) {
         if (binding == null) {
