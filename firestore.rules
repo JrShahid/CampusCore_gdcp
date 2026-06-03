@@ -45,14 +45,25 @@ service cloud.firestore {
       return "departmentId" in data.keys() ? data.departmentId : data.department;
     }
 
+    function assignmentSemesterKey(data) {
+      return data.semester == "Semester 1" ? "Semester1"
+        : data.semester == "Semester 2" ? "Semester2"
+        : data.semester == "Semester 3" ? "Semester3"
+        : data.semester == "Semester 4" ? "Semester4"
+        : data.semester == "Semester 5" ? "Semester5"
+        : data.semester == "Semester 6" ? "Semester6"
+        : data.semester == "Semester 7" ? "Semester7"
+        : data.semester == "Semester 8" ? "Semester8"
+        : data.semester;
+    }
+
     function hasTeacherAssignmentDoc(owner, subjectCode, data) {
-      return exists(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section))
-        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.teacherUid == request.auth.uid
-        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.subjectCode == subjectCode
-        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.departmentId == studentDepartment(data)
-        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.semester == data.semester
-        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.section == data.section
-        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + data.semester + "_" + data.section)).data.isActive == true;
+      return get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + assignmentSemesterKey(data) + "_" + data.section)).data.teacherUid == request.auth.uid
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + assignmentSemesterKey(data) + "_" + data.section)).data.subjectCode == subjectCode
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + assignmentSemesterKey(data) + "_" + data.section)).data.departmentId == studentDepartment(data)
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + assignmentSemesterKey(data) + "_" + data.section)).data.semester == data.semester
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + assignmentSemesterKey(data) + "_" + data.section)).data.section == data.section
+        && get(/databases/$(database)/documents/teachingAssignments/$(owner + "_" + subjectCode + "_" + studentDepartment(data) + "_" + assignmentSemesterKey(data) + "_" + data.section)).data.isActive == true;
     }
 
     function teacherHasAssignmentSubjectAt(data, index) {
@@ -75,14 +86,7 @@ service cloud.firestore {
           || teacherHasAssignmentSubjectAt(data, 1)
           || teacherHasAssignmentSubjectAt(data, 2)
           || teacherHasAssignmentSubjectAt(data, 3)
-          || teacherHasAssignmentSubjectAt(data, 4)
-          || teacherHasAssignmentSubjectAt(data, 5)
-          || teacherHasAssignmentSubjectAt(data, 6)
-          || teacherHasAssignmentSubjectAt(data, 7)
-          || teacherHasAssignmentSubjectAt(data, 8)
-          || teacherHasAssignmentSubjectAt(data, 9)
-          || teacherHasAssignmentSubjectAt(data, 10)
-          || teacherHasAssignmentSubjectAt(data, 11));
+          || teacherHasAssignmentSubjectAt(data, 4));
     }
 
     function pendingStudentId(data) {

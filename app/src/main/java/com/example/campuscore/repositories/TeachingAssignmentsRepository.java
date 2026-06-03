@@ -50,8 +50,43 @@ public class TeachingAssignmentsRepository {
                 .whereEqualTo(FirestoreFields.TEACHER_UID, auth.getCurrentUser().getUid())
                 .whereEqualTo(FirestoreFields.IS_ACTIVE, true)
                 .get()
-                .addOnSuccessListener(query -> callback.onSuccess(parseAssignments(query, true)))
+                .addOnSuccessListener(query -> {
+                    List<TeachingAssignmentModel> assignments = parseAssignments(query, true);
+                    syncTeacherAssignmentFields(assignments, callback);
+                })
                 .addOnFailureListener(error -> callback.onError(readableError(error, "teaching assignments")));
+    }
+
+    private void syncTeacherAssignmentFields(List<TeachingAssignmentModel> assignments,
+                                             FirestoreCallback<List<TeachingAssignmentModel>> callback) {
+        if (auth.getCurrentUser() == null) {
+            callback.onSuccess(assignments);
+            return;
+        }
+        List<String> assignedSubjects = new ArrayList<>();
+        String employeeId = "";
+        for (TeachingAssignmentModel assignment : assignments) {
+            if (!assignment.getSubjectCode().isEmpty()
+                    && !assignedSubjects.contains(assignment.getSubjectCode())) {
+                assignedSubjects.add(assignment.getSubjectCode());
+            }
+            if (employeeId.isEmpty() && !assignment.getEmployeeId().isEmpty()) {
+                employeeId = assignment.getEmployeeId();
+            }
+        }
+        Map<String, Object> values = new HashMap<>();
+        values.put(FirestoreFields.ASSIGNED_SUBJECTS, assignedSubjects);
+        if (!employeeId.isEmpty()) {
+            values.put(FirestoreFields.EMPLOYEE_ID, employeeId);
+        }
+        firestore.collection(FirestoreCollections.USERS)
+                .document(auth.getCurrentUser().getUid())
+                .set(values, SetOptions.merge())
+                .addOnSuccessListener(unused -> callback.onSuccess(assignments))
+                .addOnFailureListener(error -> {
+                    Log.w(TAG, "Teacher assignment authorization sync failed: " + error.getMessage());
+                    callback.onSuccess(assignments);
+                });
     }
 
     public void fetchAssignments(FirestoreCallback<List<TeachingAssignmentModel>> callback) {
