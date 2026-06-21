@@ -98,6 +98,17 @@ public class UploadNotesFragment extends Fragment {
     }
 
     private void setupAcademicSelectors() {
+        binding.subjectSpinner.setThreshold(0);
+        binding.subjectSpinner.setOnClickListener(v -> {
+            if (!currentAssignments.isEmpty()) {
+                binding.subjectSpinner.showDropDown();
+            }
+        });
+        binding.subjectSpinner.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && !currentAssignments.isEmpty()) {
+                binding.subjectSpinner.showDropDown();
+            }
+        });
         binding.departmentSpinner.setVisibility(View.GONE);
         binding.semesterSpinner.setVisibility(View.GONE);
         assignmentsRepository.fetchTeacherAssignments(new FirestoreCallback<List<TeachingAssignmentModel>>() {
@@ -129,7 +140,9 @@ public class UploadNotesFragment extends Fragment {
         if (subjectAdapter.getCount() > 0) {
             binding.subjectSpinner.setText(subjectAdapter.getItem(0), false);
         }
-        binding.uploadButton.setEnabled(!currentAssignments.isEmpty());
+        boolean hasAssignments = !currentAssignments.isEmpty();
+        binding.subjectSpinner.setEnabled(hasAssignments);
+        binding.uploadButton.setEnabled(hasAssignments);
         binding.emptyText.setText(currentAssignments.isEmpty()
                 ? getString(R.string.no_teaching_assignments_help)
                 : getString(R.string.teacher_notes_empty));
@@ -324,8 +337,9 @@ public class UploadNotesFragment extends Fragment {
     }
 
     private void setUploadingState(boolean loading, int progress) {
-        binding.uploadButton.setEnabled(!loading);
+        binding.uploadButton.setEnabled(!loading && !currentAssignments.isEmpty());
         binding.selectPdfButton.setEnabled(!loading);
+        binding.subjectSpinner.setEnabled(!loading && !currentAssignments.isEmpty());
         binding.uploadProgressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
         binding.uploadProgressText.setVisibility(loading ? View.VISIBLE : View.GONE);
         binding.uploadProgressBar.setProgress(progress);
